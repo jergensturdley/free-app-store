@@ -16,8 +16,10 @@ that can't be confirmed clean is excluded (fail closed).
 - **All Free Apps** — a bundled, best-effort index of the entire free native-Mac
   catalog (thousands of apps, built by crawling Apple's Search API; see
   "Full-catalog index" below); every entry is re-verified live before display
-- **Browse** the Top Free Mac Apps chart plus 22 categories (Business, Developer
-  Tools, Games, Graphics & Design, Productivity, Utilities, …)
+- **Browse** the Top Free chart plus 22 categories (Business, Developer
+  Tools, Games, Graphics & Design, Productivity, Utilities, …); each genre
+  category pairs Apple's ~100-entry top chart (popularity order) with the rest
+  of the genre from the bundled catalog index, so categories show full depth
 - **Search** the entire Mac App Store catalog (search box, top right, or ⌘F)
 - **Strict filtering** — each candidate's product page is checked for
   `hasInAppPurchases` and `isFree`; only `free + no IAP` apps are listed

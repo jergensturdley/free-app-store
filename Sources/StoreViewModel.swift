@@ -101,7 +101,20 @@ final class StoreViewModel: ObservableObject {
                     let seeds = try await StoreAPI.chart(genreId: category.genreId)
                     try Task.checkCancellation()
                     let metadata = try await StoreAPI.lookup(ids: seeds.map(\.id))
-                    candidates = seeds.compactMap { metadata[$0.id] }
+                    var merged = seeds.compactMap { metadata[$0.id] }
+
+                    // Apple's chart feed caps at ~100 entries per genre, so
+                    // append the rest of the genre from the bundled catalog
+                    // index: chart order leads, then full depth. ("top" stays
+                    // chart-only by design.)
+                    if category.genreId != nil, let index = StoreAPI.bundledIndex() {
+                        let chartIds = Set(merged.map(\.id))
+                        let rest = index.apps.filter {
+                            $0.genre == category.name && !chartIds.contains($0.id)
+                        }
+                        merged.append(contentsOf: rest)
+                    }
+                    candidates = merged
 
                 case .search(let term):
                     self.indexInfo = nil
