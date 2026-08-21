@@ -8,12 +8,12 @@ App Store app directly on that app's page, ready to install.
 
 The Mac App Store's "free" charts are full of apps that are free to download but
 packed with in-app purchases. This app re-checks every candidate against Apple's
-own product-page data and **only shows apps without in-app purchases** — anything
+own product-page data and **only shows apps without in-app purchases**: anything
 that can't be confirmed clean is excluded (fail closed).
 
 ## Features
 
-- **All Free Apps** — a bundled, best-effort index of the entire free native-Mac
+- **All Free Apps**: a bundled, best-effort index of the entire free native-Mac
   catalog (thousands of apps, built by crawling Apple's Search API; see
   "Full-catalog index" below); every entry is re-verified live before display
 - **Browse** the Top Free chart plus 22 categories (Business, Developer
@@ -21,15 +21,15 @@ that can't be confirmed clean is excluded (fail closed).
   category pairs Apple's ~100-entry top chart (popularity order) with the rest
   of the genre from the bundled catalog index, so categories show full depth
 - **Search** the entire Mac App Store catalog (search box, top right, or ⌘F)
-- **Strict filtering** — each candidate's product page is checked for
+- **Strict filtering**: each candidate's product page is checked for
   `hasInAppPurchases` and `isFree`; only `free + no IAP` apps are listed
 - **One click** opens the native App Store app on that app's page
   (`macappstore://` deep link); right-click for web page / copy link
-- **Live verification UI** — clean apps appear as they're verified, with a
+- **Live verification UI**: clean apps appear as they're verified, with a
   progress indicator for the rest
-- **Verdict cache** — verification results are cached for 7 days in
+- **Verdict cache**: verification results are cached for 7 days in
   `~/Library/Caches/FreeAppStore`, so browsing is instant after the first pass
-- **Ratings** — live star ratings on every card. Cross-platform apps get
+- **Ratings**: live star ratings on every card. Cross-platform apps get
   Apple's official aggregate from the Lookup API; Mac-only apps get a live
   average computed from Apple's published recent reviews (see "Ratings" below)
 - Developer names, app icons, and genres from Apple's Search and Lookup APIs
@@ -44,7 +44,7 @@ open FreeAppStore.app
 Requires Apple Silicon or Intel Mac with macOS 14+ and the Command Line Tools
 (`xcode-select --install`). The build is ad-hoc signed and runs locally.
 
-## Ratings — why Mac ratings are hard
+## Ratings: why Mac ratings are hard
 
 Apple's public Search/Lookup APIs return **no rating aggregate for Mac-only
 apps** (`averageUserRating` is always 0; it only carries values for apps that
@@ -70,7 +70,7 @@ So the app enriches ratings in a background pass after the grid loads:
 
 Verified while building: Amphetamine ≈ 4.7 from its 20 most recent reviews;
 Microsoft Word/Outlook/Excel all resolve too. The full per-storefront
-aggregates Apple shows in the App Store app are private to Apple — this is the
+aggregates Apple shows in the App Store app are private to Apple; this is the
 closest a public client can get.
 
 ## How it works
@@ -80,7 +80,7 @@ closest a public client can get.
 | Search | iTunes Search API (`entity=macSoftware`, storefront = your locale) |
 | Charts | Apple's legacy RSS feed `topfreemacapps` (overall + per genre) |
 | Metadata | iTunes Lookup API (batched by 100 ids) |
-| IAP check | The app's page on `apps.apple.com` — the embedded page data contains the app's own offer block (`offerDisplayProperties.adamId`) with the authoritative `hasInAppPurchases` / `isFree` flags |
+| IAP check | The app's page on `apps.apple.com`: the embedded page data contains the app's own offer block (`offerDisplayProperties.adamId`) with the authoritative `hasInAppPurchases` / `isFree` flags |
 | Open in App Store | `macappstore://apps.apple.com/app/id<id>` via `NSWorkspace` |
 
 Only **native Mac apps** (`kind == "mac-software"`) at price 0 are considered;
@@ -90,10 +90,10 @@ Only **native Mac apps** (`kind == "mac-software"`) at price 0 are considered;
 
 There is **no maintained third-party mirror** of the Mac App Store. I checked:
 
-- `appgoblin-dev/appgoblin-data` (GitHub, 3.1M apps w/ IAP flags) — iOS/Android only, zero Mac apps
-- Apple's own `apps.apple.com` sitemaps (1,344 shards) — iOS apps only; Mac apps excluded
-- `marzzzello/appstore_crawler` — dead (Apple removed the genre pages it crawled)
-- MacUpdate — sitemap broken, crawling disallowed
+- `appgoblin-dev/appgoblin-data` (GitHub, 3.1M apps w/ IAP flags): iOS/Android only, zero Mac apps
+- Apple's own `apps.apple.com` sitemaps (1,344 shards): iOS apps only; Mac apps excluded
+- `marzzzello/appstore_crawler`: dead (Apple removed the genre pages it crawled)
+- MacUpdate: sitemap broken, crawling disallowed
 
 So the index is built from Apple's own **iTunes Search API**: a single query is
 relevance-truncated even under the 200-result cap, so the builder enumerates a
