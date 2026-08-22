@@ -4,6 +4,8 @@ A native macOS app that mirrors the free side of the Mac App Store: every app
 shown is **$0 with no in-app purchases (IAP)**. Clicking any app opens the real
 App Store app directly on that app's page, ready to install.
 
+<img src="Resources/banner.png" width="800" alt="Free App Store marketing banner">
+
 ## Why this exists
 
 The Mac App Store's "free" charts are full of apps that are free to download but
@@ -42,7 +44,20 @@ open FreeAppStore.app
 ```
 
 Requires Apple Silicon or Intel Mac with macOS 14+ and the Command Line Tools
-(`xcode-select --install`). The build is ad-hoc signed and runs locally.
+(`xcode-select --install`). The build is ad-hoc signed and runs locally. Add
+`UNIVERSAL=1` (`UNIVERSAL=1 ./build.sh`) to produce a single binary that runs on
+both Apple Silicon and Intel Macs.
+
+### Binary releases
+
+Every `v*` tag pushed to GitHub builds a universal `.app`, zips it, and attaches
+it to a GitHub Release automatically (`.github/workflows/release.yml`). Because
+the app is ad-hoc signed rather than notarized, macOS may flag a downloaded
+copy; right-click the app and choose **Open**, or clear the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine /path/to/FreeAppStore.app
+```
 
 ## Ratings: why Mac ratings are hard
 

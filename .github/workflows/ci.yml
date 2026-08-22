@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app bundle
+        run: ./build.sh
+
+      - name: Verify bundle
+        run: |
+          test -f FreeAppStore.app/Contents/MacOS/FreeAppStore
+          test -f FreeAppStore.app/Contents/Info.plist
+          test -f FreeAppStore.app/Contents/Resources/free-mac-index.json
+          echo "bundle OK"
+
+      - name: Compile and run headless engine test
+        # Exercise the real Apple endpoints; network flakiness / Apple-side
+        # rate limits should not block a merge, hence continue-on-error.
+        continue-on-error: true
+        run: |
+          swiftc -O -swift-version 5 -module-cache-path .build/module-cache \
+            Sources/Models.swift Sources/IAPCache.swift Sources/StoreAPI.swift \
+            Tests/cli_test.swift -o .build/cli_test
+          ./.build/cli_test

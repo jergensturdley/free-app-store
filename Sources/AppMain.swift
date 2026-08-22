@@ -15,8 +15,6 @@ struct FreeAppStoreApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // We cache verification verdicts ourselves; keep HTTP caching off.
-        URLCache.shared = URLCache(memoryCapacity: 0, diskCapacity: 0)
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
     }

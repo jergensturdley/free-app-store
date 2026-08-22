@@ -52,6 +52,10 @@ enum StoreAPI {
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 30
+        // Always revalidate product pages/API responses rather than serving a
+        // stale cached body (verdicts must stay fresh). App artwork, fetched
+        // separately via AsyncImage, still uses the default URLCache.
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse,
            !(200..<300).contains(http.statusCode) {
@@ -235,15 +239,6 @@ enum StoreAPI {
                 continuation.resume(returning: text)
             }
         }
-    }
-
-    /// Best available rating for an app: cached value, otherwise a fresh
-    /// review sample (which is then cached).
-    static func rating(appId: String, cache: IAPCache) async -> (average: Double, count: Int)? {
-        if let cached = await cache.rating(for: appId) { return cached }
-        guard let fresh = await fetchReviewRating(appId: appId) else { return nil }
-        await cache.storeRating(fresh.average, count: fresh.count, for: appId)
-        return fresh
     }
 
     // MARK: - In-app purchase verification

@@ -33,7 +33,8 @@ final class StoreViewModel: ObservableObject {
 
     /// (Re)load whatever mode is active.
     func refresh() {
-        if case .search = mode, !searchText.isEmpty {} else {
+        let isSearching = if case .search = mode { !searchText.isEmpty } else { false }
+        if !isSearching {
             mode = .category(selection ?? "all")
         }
         run()
@@ -86,7 +87,7 @@ final class StoreViewModel: ObservableObject {
                     if let index = StoreAPI.bundledIndex() {
                         candidates = index.apps
                         let day = String(index.built.prefix(10))
-                        self.indexInfo = "Catalog index of \(index.total) free apps (built \(day)) — each one re-verified live below"
+                        self.indexInfo = "Catalog index of \(index.total) free apps (built \(day)). Each one re-verified live below."
                     } else {
                         self.indexInfo = nil
                         candidates = []

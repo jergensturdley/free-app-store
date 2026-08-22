@@ -5,27 +5,48 @@ cd "$(dirname "$0")"
 
 APP="FreeAppStore.app"
 
-echo "==> Compiling FreeAppStore"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" .build/module-cache .build/tmp
 
 # Keep compiler intermediates local so builds also work in restricted sandboxes.
 export TMPDIR="$PWD/.build/tmp"
 
-swiftc \
-  -O \
-  -swift-version 5 \
-  -module-cache-path "$PWD/.build/module-cache" \
-  -target arm64-apple-macos14.0 \
-  -framework SwiftUI \
-  -framework AppKit \
-  Sources/Models.swift \
-  Sources/IAPCache.swift \
-  Sources/StoreAPI.swift \
-  Sources/StoreViewModel.swift \
-  Sources/Views.swift \
-  Sources/AppMain.swift \
-  -o "$APP/Contents/MacOS/FreeAppStore"
+SOURCES=(
+  Sources/Models.swift
+  Sources/IAPCache.swift
+  Sources/StoreAPI.swift
+  Sources/StoreViewModel.swift
+  Sources/Views.swift
+  Sources/AppMain.swift
+)
+
+# Compiles the app for a single architecture.
+compile_arch() {
+  local target="$1" output="$2"
+  swiftc \
+    -O \
+    -swift-version 5 \
+    -module-cache-path "$PWD/.build/module-cache" \
+    -target "$target" \
+    -framework SwiftUI \
+    -framework AppKit \
+    "${SOURCES[@]}" \
+    -o "$output"
+}
+
+if [ "${UNIVERSAL:-0}" = "1" ]; then
+  echo "==> Compiling FreeAppStore (universal: arm64 + x86_64)"
+  compile_arch arm64-apple-macos14.0   "$APP/Contents/MacOS/FreeAppStore-arm64"
+  compile_arch x86_64-apple-macos14.0  "$APP/Contents/MacOS/FreeAppStore-x86_64"
+  lipo -create \
+    "$APP/Contents/MacOS/FreeAppStore-arm64" \
+    "$APP/Contents/MacOS/FreeAppStore-x86_64" \
+    -output "$APP/Contents/MacOS/FreeAppStore"
+  rm -f "$APP/Contents/MacOS/FreeAppStore-arm64" "$APP/Contents/MacOS/FreeAppStore-x86_64"
+else
+  echo "==> Compiling FreeAppStore (arm64)"
+  compile_arch arm64-apple-macos14.0 "$APP/Contents/MacOS/FreeAppStore"
+fi
 
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 
