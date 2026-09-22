@@ -48,6 +48,96 @@ enum StoreAPI {
 
     // MARK: - Transport
 
+    /// Redirect guard for app product pages: the storefront edge answers
+    /// region-mismatched requests (e.g. a "us" URL reached from a "cn"
+    /// network) with a bare region redirect (`Location: /cn`) that drops the
+    /// whole `/app/id…` path. Following it lands on the storefront home,
+    /// whose embedded data holds offers only for editorial/related apps —
+    /// never the requested one — so verification would fail closed on every
+    /// app. This re-attaches the app path before the redirect is followed.
+    private final class AppPageRedirectDelegate: NSObject, URLSessionTaskDelegate {
+        private let lock = NSLock()
+        private var appIds: [Int: String] = [:]
+
+        func register(_ appId: String, for task: URLSessionTask) {
+            lock.lock(); defer { lock.unlock() }
+            appIds[task.taskIdentifier] = appId
+        }
+
+        func unregister(_ task: URLSessionTask) {
+            lock.lock(); defer { lock.unlock() }
+            appIds.removeValue(forKey: task.taskIdentifier)
+        }
+
+        func urlSession(_ session: URLSession, task: URLSessionTask,
+                        willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest,
+                        completionHandler: @escaping (URLRequest?) -> Void) {
+            lock.lock(); defer { lock.unlock() }
+            guard let appId = appIds[task.taskIdentifier],
+                  let url = request.url,
+                  !url.path.contains("id\(appId)")
+            else {
+                completionHandler(request)
+                return
+            }
+            guard let scheme = url.scheme, let host = url.host,
+                  let fixed = URL(string: "\(scheme)://\(host)\(url.path)/app/id\(appId)")
+            else {
+                completionHandler(request)
+                return
+            }
+            var rewritten = request
+            rewritten.url = fixed
+            completionHandler(rewritten)
+        }
+    }
+
+    private static let appPageRedirectDelegate = AppPageRedirectDelegate()
+    private static let appPageSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 30
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: config,
+                          delegate: appPageRedirectDelegate,
+                          delegateQueue: nil)
+    }()
+
+    /// Fetches an app's product page through the redirect-preserving session.
+    private static func fetchAppPage(appId: String) async throws -> Data {
+        guard let url = URL(string: "https://apps.apple.com/\(country)/app/id\(appId)") else {
+            throw StoreAPIError.badURL
+        }
+        var request = URLRequest(url: url)
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 30
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        return try await withCheckedThrowingContinuation { continuation in
+            final class TaskBox: @unchecked Sendable { weak var task: URLSessionDataTask? }
+            let box = TaskBox()
+            let task = appPageSession.dataTask(with: request) { data, response, error in
+                if let task = box.task { appPageRedirectDelegate.unregister(task) }
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let data, let http = response as? HTTPURLResponse else {
+                    continuation.resume(throwing: StoreAPIError.badURL)
+                    return
+                }
+                if !(200..<300).contains(http.statusCode) {
+                    continuation.resume(throwing: StoreAPIError.http(http.statusCode))
+                    return
+                }
+                continuation.resume(returning: data)
+            }
+            box.task = task
+            appPageRedirectDelegate.register(appId, for: task)
+            task.resume()
+        }
+    }
+
     private static func get(_ url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
@@ -264,11 +354,8 @@ enum StoreAPI {
             }
             attempt += 1
 
-            guard let url = URL(string: "https://apps.apple.com/\(country)/app/id\(appId)") else {
-                break
-            }
             do {
-                let data = try await get(url)
+                let data = try await fetchAppPage(appId: appId)
                 let parsed = parseVerdict(page: data, appId: appId)
                 if parsed != .unknown {
                     verdict = parsed
